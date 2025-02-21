@@ -91,12 +91,6 @@ predictBtn.addEventListener('click', async function() {
     const selectedArea = areaSelect.value;
     if (!selectedArea) return;
 
-    // Animate input fields
-    document.querySelectorAll('.input-field').forEach(field => {
-        field.classList.add('animate');
-    });
-    predictBtn.classList.add('animate');
-
     // Remove current marker if exists
     if (currentMarker) {
         currentMarker.remove();
@@ -117,19 +111,29 @@ predictBtn.addEventListener('click', async function() {
         marker.openPopup();
         currentMarker = marker;
 
-        updateResults(prediction);
+        // Update prediction results
+        function updateResults(prediction) {
+            const densityMeter = document.querySelector('.meter-fill');
+            const densityValue = document.getElementById('predicted-density');
+            const maeValue = document.getElementById('mae-value');
+            const rmseValue = document.getElementById('rmse-value');
+        
+            // Update density meter
+            densityMeter.style.width = `${prediction.density * 100}%`;
+            
+            // Update values
+            densityValue.textContent = prediction.density.toFixed(2);
+            maeValue.textContent = prediction.mae.toFixed(4);
+            rmseValue.textContent = prediction.rmse.toFixed(4);
+        
+            // Show results panel
+            resultsPanel.classList.add('active');
+        }
         showToast('Prediction completed successfully!');
     } catch (error) {
         showToast('Failed to get prediction. Please try again.', 'error');
     } finally {
         loadingOverlay.classList.remove('active');
-        // Reset animations after delay
-        setTimeout(() => {
-            document.querySelectorAll('.input-field').forEach(field => {
-                field.classList.remove('animate');
-            });
-            predictBtn.classList.remove('animate');
-        }, 1000);
     }
 });
 

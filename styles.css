@@ -181,31 +181,11 @@ button {
     background: var(--primary-light);
 }
 
-.feature-inputs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.input-field {
-    width: 100%;
-    transition: transform 0.5s ease;
-}
-
-.input-field.animate {
-    transform: translateX(calc(100vw - 500px));
-    opacity: 0;
-}
-
 #predict-btn {
-    transition: transform 0.5s ease;
+    background: var(--success-color);
+    color: white;
 }
 
-#predict-btn.animate {
-    transform: translateX(calc(100vw - 500px));
-    opacity: 0;
-}
 #predict-btn:hover:not(:disabled) {
     filter: brightness(1.1);
 }
