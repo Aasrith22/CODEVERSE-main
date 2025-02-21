@@ -13,7 +13,7 @@ const junctionData = {
 // Initialize map
 const map = L.map('map').setView([17.385044, 78.486671], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+    attribution: ' OpenStreetMap contributors'
 }).addTo(map);
 
 // Store markers and UI elements
@@ -39,8 +39,8 @@ function getTrafficColor(density) {
 
 function createJunctionMarker(name, coords, density) {
     const trafficStyle = getTrafficColor(density);
-    const marker = L.circleMarker([coords.lat, coords.lng], {
-        radius: 22,
+    const marker = L.circle([coords.lat, coords.lng], {
+        radius: 300, // Fixed radius in meters
         fillColor: trafficStyle.color,
         color: '#fff',
         weight: 2,
