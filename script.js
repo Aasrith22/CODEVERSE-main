@@ -1,341 +1,174 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize GSAP
-    gsap.config({ nullTargetWarn: false });
+// Junction coordinates data
+const junctionData = {
+    'Kukatpally': { lat: 17.493338, lng: 78.402547 },
+    'Ameerpet': { lat: 17.434275, lng: 78.445403 },
+    'Miyapur': { lat: 17.496653, lng: 78.361809 },
+    'Bowenpally': { lat: 17.463865, lng: 78.472837 },
+    'Secunderabad': { lat: 17.434962, lng: 78.500812 },
+    'Madhapur': { lat: 17.451399, lng: 78.381218 }
 
-    // Initialize Leaflet map
-    const map = L.map('map').setView([17.4875, 78.3953], 13);
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: ' OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(map);
+};
 
-    // Initialize variables
-    let marker;
-    let densityCircle;
-    const circleRadius = 2000;
+// Initialize map
+const map = L.map('map').setView([17.385044, 78.486671], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
 
-    // Get DOM elements
-    const cityInput = document.getElementById('city-input');
-    const areaSelect = document.getElementById('area-select'); // Changed to select element
-    const searchBtn = document.getElementById('search-btn');
-    const predictBtn = document.getElementById('predict-btn');
-    const timeInput = document.getElementById('time');
-    const daySelect = document.getElementById('day');
-    const weatherSelect = document.getElementById('weather');
-    const resultsPanel = document.querySelector('.results-panel');
-    const predictedDensity = document.getElementById('predicted-density');
-    const maeValue = document.getElementById('mae-value');
-    const rmseValue = document.getElementById('rmse-value');
-    const meterFill = document.querySelector('.meter-fill');
-    const loadingOverlay = document.querySelector('.loading-overlay');
+// Store markers and UI elements
+let markers = {};
+const areaSelect = document.getElementById('area-select');
+const timeInput = document.getElementById('time');
+const daySelect = document.getElementById('day');
+const weatherSelect = document.getElementById('weather');
+const predictBtn = document.getElementById('predict-btn');
+const loadingOverlay = document.querySelector('.loading-overlay');
+const resultsPanel = document.querySelector('.results-panel');
 
-    // Set default time to current time
-    const now = new Date();
-    timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+// Create marker for selected junction
+function getTrafficColor(density) {
+    if (density <= 0.33) {
+        return { color: '#4CAF50', opacity: 0.4 }; // Low traffic - Green
+    } else if (density <= 0.66) {
+        return { color: '#ff9800', opacity: 0.6 }; // Medium traffic - Orange
+    } else {
+        return { color: '#f44336', opacity: 0.8 }; // High traffic - Red
+    }
+}
+
+function createJunctionMarker(name, coords, density) {
+    const trafficStyle = getTrafficColor(density);
+    const marker = L.circleMarker([coords.lat, coords.lng], {
+        radius: 22,
+        fillColor: trafficStyle.color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: trafficStyle.opacity,
+        className: `junction-marker ${name.toLowerCase()}`
+    });
+
+    marker.bindPopup(`
+        <div class="junction-popup">
+            <div class="name">${name} Junction</div>
+            <div class="coordinates">
+                ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}
+            </div>
+            <div class="traffic-info">
+                Traffic Density: ${(density * 100).toFixed(1)}%
+            </div>
+        </div>
+    `);
+
+    return marker;
+}
+
+// Store current active marker
+let currentMarker = null;
+
+// Handle area selection
+areaSelect.addEventListener('change', function(e) {
+    const selectedArea = e.target.value;
     
-    // Set default day to current day
-    const today = now.getDay() || 7;
-    daySelect.value = today;
-
-    // Set Hyderabad as default city and make it readonly
-    cityInput.value = 'Hyderabad';
-    cityInput.readOnly = true;
-
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        const icon = document.createElement('i');
-        icon.className = type === 'success' ? 'fas fa-check-circle' :
-                        type === 'error' ? 'fas fa-exclamation-circle' :
-                        'fas fa-info-circle';
-        
-        const text = document.createElement('span');
-        text.textContent = message;
-        
-        toast.appendChild(icon);
-        toast.appendChild(text);
-        
-        document.querySelector('.toast-container').appendChild(toast);
-        
-        gsap.from(toast, {
-            x: 100,
-            opacity: 0,
-            duration: 0.3,
-            ease: 'power2.out'
-        });
-
-        setTimeout(() => {
-            gsap.to(toast, {
-                x: 100,
-                opacity: 0,
-                duration: 0.3,
-                ease: 'power2.in',
-                onComplete: () => toast.remove()
-            });
-        }, 3000);
+    // Remove current marker if exists
+    if (currentMarker) {
+        currentMarker.remove();
+        currentMarker = null;
     }
 
-    // Loading overlay functions
-    function showLoading() {
-        loadingOverlay.classList.add('active');
+    if (selectedArea) {
+        map.setView([
+            junctionData[selectedArea].lat,
+            junctionData[selectedArea].lng
+        ], 15);
+        validateInputs();
+    }
+});
+
+// Update the prediction handler
+predictBtn.addEventListener('click', async function() {
+    const selectedArea = areaSelect.value;
+    if (!selectedArea) return;
+
+    // Remove current marker if exists
+    if (currentMarker) {
+        currentMarker.remove();
+        currentMarker = null;
     }
 
-    function hideLoading() {
+    loadingOverlay.classList.add('active');
+
+    try {
+        const prediction = {
+            density: Math.random(),
+            mae: Math.random() * 0.1,
+            rmse: Math.random() * 0.15
+        };
+
+        const marker = createJunctionMarker(selectedArea, junctionData[selectedArea], prediction.density);
+        marker.addTo(map);
+        marker.openPopup();
+        currentMarker = marker;
+
+        // Update prediction results
+        function updateResults(prediction) {
+            const densityMeter = document.querySelector('.meter-fill');
+            const densityValue = document.getElementById('predicted-density');
+            const maeValue = document.getElementById('mae-value');
+            const rmseValue = document.getElementById('rmse-value');
+        
+            // Update density meter
+            densityMeter.style.width = `${prediction.density * 100}%`;
+            
+            // Update values
+            densityValue.textContent = prediction.density.toFixed(2);
+            maeValue.textContent = prediction.mae.toFixed(4);
+            rmseValue.textContent = prediction.rmse.toFixed(4);
+        
+            // Show results panel
+            resultsPanel.classList.add('active');
+        }
+        showToast('Prediction completed successfully!');
+    } catch (error) {
+        showToast('Failed to get prediction. Please try again.', 'error');
+    } finally {
         loadingOverlay.classList.remove('active');
     }
-
-    // Function to search for location using Nominatim
-    async function searchLocation(city, area) {
-        showLoading();
-        try {
-            const query = `${area}, ${city}`;
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-            const data = await response.json();
-            
-            if (data && data.length > 0) {
-                const location = data[0];
-                const latlng = L.latLng(location.lat, location.lon);
-                
-                if (marker) map.removeLayer(marker);
-                if (densityCircle) map.removeLayer(densityCircle);
-
-                marker = L.marker(latlng, {
-                    opacity: 0
-                }).addTo(map);
-                
-                gsap.to(marker._icon, {
-                    opacity: 1,
-                    duration: 0.5,
-                    ease: 'power2.out'
-                });
-
-                densityCircle = L.circle(latlng, {
-                    radius: 0,
-                    color: '#666',
-                    fillColor: '#666',
-                    fillOpacity: 0.15,
-                    weight: 2
-                }).addTo(map);
-
-                gsap.to(densityCircle, {
-                    radius: circleRadius,
-                    duration: 1,
-                    ease: 'elastic.out(1, 0.5)'
-                });
-
-                map.flyTo(latlng, 13, {
-                    duration: 1.5
-                });
-
-                predictBtn.disabled = false;
-                gsap.from(predictBtn, {
-                    scale: 0.95,
-                    opacity: 0.5,
-                    duration: 0.3
-                });
-
-                showToast('Location found successfully!', 'success');
-                return true;
-            } else {
-                throw new Error('Location not found');
-            }
-        } catch (error) {
-            console.error('Error searching location:', error);
-            showToast('Location not found. Please try a different search.', 'error');
-            return false;
-        } finally {
-            hideLoading();
-        }
-    }
-
-    // Handle search button click
-    searchBtn.addEventListener('click', async () => {
-        const city = cityInput.value.trim();
-        const area = areaSelect.value; // Changed to use select value
-
-        if (!city || !area) {
-            showToast('Please select an area.', 'warning');
-            return;
-        }
-
-        searchBtn.disabled = true;
-        try {
-            await searchLocation(city, area);
-        } finally {
-            searchBtn.disabled = false;
-        }
-    });
-
-    // Handle area select change
-    areaSelect.addEventListener('change', () => {
-        if (areaSelect.value) {
-            searchBtn.click();
-        }
-    });
-
-    // Disable map click for location selection since we're using dropdown
-    map.off('click');
-
-    // Rest of the code remains the same
-    async function predictTraffic() {
-        if (!marker || !densityCircle) {
-            showToast('Please select a location first!', 'warning');
-            return;
-        }
-
-        showLoading();
-        try {
-            const coordinates = marker.getLatLng();
-            const time = timeInput.value;
-            const day = parseInt(daySelect.value);
-            const weather = weatherSelect.value;
-
-            console.log('Prediction features:', {
-                coordinates,
-                time,
-                day,
-                weather
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const density = Math.random();
-            const mae = (Math.random() * 0.2).toFixed(3);
-            const rmse = (Math.random() * 0.3).toFixed(3);
-
-            updateTrafficVisualization(densityCircle, density);
-            
-            resultsPanel.style.display = 'block';
-            gsap.from(resultsPanel, {
-                y: 20,
-                opacity: 0,
-                duration: 0.5,
-                ease: 'power2.out'
-            });
-
-            meterFill.style.width = `${density * 100}%`;
-            meterFill.style.backgroundColor = density < 0.33 ? '#4CAF50' :
-                                            density < 0.66 ? '#ff9800' : '#f44336';
-
-            gsap.to(predictedDensity, {
-                innerHTML: density.toFixed(3),
-                duration: 1,
-                snap: { innerHTML: 0.001 }
-            });
-
-            gsap.to(maeValue, {
-                innerHTML: mae,
-                duration: 1,
-                snap: { innerHTML: 0.001 }
-            });
-
-            gsap.to(rmseValue, {
-                innerHTML: rmse,
-                duration: 1,
-                snap: { innerHTML: 0.001 }
-            });
-
-            showToast('Prediction completed successfully!', 'success');
-        } catch (error) {
-            console.error('Error predicting traffic:', error);
-            showToast('Error predicting traffic. Please try again.', 'error');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    // Handle prediction button click
-    predictBtn.addEventListener('click', async () => {
-        predictBtn.disabled = true;
-        try {
-            await predictTraffic();
-        } finally {
-            predictBtn.disabled = false;
-        }
-    });
-
-    function updateTrafficVisualization(circle, density) {
-        let color, message;
-        
-        if (density < 0.33) {
-            color = '#4CAF50';
-            message = 'Low Traffic';
-        } else if (density < 0.66) {
-            color = '#ff9800';
-            message = 'Medium Traffic';
-        } else {
-            color = '#f44336';
-            message = 'High Traffic';
-        }
-
-        const markerHtml = `
-            <div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>
-        `;
-        const coloredIcon = L.divIcon({
-            html: markerHtml,
-            className: 'colored-marker',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-        });
-
-        gsap.to(marker._icon, {
-            opacity: 0,
-            duration: 0.3,
-            ease: 'power2.in',
-            onComplete: () => {
-                marker.setIcon(coloredIcon);
-                gsap.to(marker._icon, {
-                    opacity: 1,
-                    duration: 0.5,
-                    ease: 'power2.out'
-                });
-            }
-        });
-
-        gsap.to(circle, {
-            radius: circleRadius * 1.2,
-            fillOpacity: 0,
-            opacity: 0,
-            duration: 0.3,
-            ease: 'power2.in',
-            onComplete: () => {
-                circle.setStyle({
-                    color: color,
-                    fillColor: color
-                });
-                
-                gsap.to(circle, {
-                    radius: circleRadius,
-                    fillOpacity: 0.15,
-                    opacity: 1,
-                    duration: 0.5,
-                    ease: 'elastic.out(1, 0.5)'
-                });
-            }
-        });
-
-        circle.bindPopup(message, {
-            closeButton: false,
-            className: 'traffic-popup'
-        }).openPopup();
-    }
-
-    // Initial animations
-    gsap.from('.sidebar', {
-        x: -50,
-        opacity: 0,
-        duration: 1,
-        ease: 'power2.out'
-    });
-
-    gsap.from('.legend', {
-        y: 50,
-        opacity: 0,
-        duration: 1,
-        delay: 0.5,
-        ease: 'power2.out'
-    });
 });
+
+// Remove initial marker creation
+// createJunctionMarkers();
+
+// Form validation
+function validateInputs() {
+    const isTimeValid = timeInput.value !== '';
+    const isDayValid = daySelect.value !== '';
+    const isWeatherValid = weatherSelect.value !== '';
+    const isAreaValid = areaSelect.value !== '';
+
+    predictBtn.disabled = !(isTimeValid && isDayValid && isWeatherValid && isAreaValid);
+}
+
+// Add validation listeners
+[timeInput, daySelect, weatherSelect].forEach(input => {
+    input.addEventListener('change', validateInputs);
+});
+
+// Toast notification function
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    const container = document.querySelector('.toast-container');
+    container.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
