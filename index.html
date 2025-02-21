@@ -49,9 +49,31 @@
                 <div class="prediction-panel">
                     <h2><i class="fas fa-sliders-h"></i> Prediction Controls</h2>
                     <div class="feature-inputs">
+                        <!-- Replace the time input with these dropdowns -->
                         <div class="input-field">
-                            <i class="far fa-clock"></i>
-                            <input type="time" id="time" name="time">
+                            <i class="fas fa-clock"></i>
+                            <select id="time" name="time">
+                                <option value="">Select Hour</option>
+                                <!-- Hours will be added via JavaScript -->
+                            </select>
+                        </div>
+                        
+                        <div class="input-field">
+                            <i class="fas fa-calendar-alt"></i>
+                            <select id="random-events" name="random-events">
+                                <option value="">Random Events</option>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-field">
+                            <i class="fas fa-traffic-light"></i>
+                            <select id="peak-hours" name="peak-hours">
+                                <option value="">Peak Hours</option>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
                         </div>
                         <div class="input-field">
                             <i class="far fa-calendar-alt"></i>
@@ -66,11 +88,23 @@
                             </select>
                         </div>
                         <div class="input-field">
+                            <i class="fas fa-car"></i>
+                            <select id="vehicle-type" name="vehicle-type">
+                                <option value="">Select Vehicle Type</option>
+                                <option value="heavy">Heavy vehicles</option>
+                                <option value="two-wheeler">Two-Wheeler</option>
+                                <option value="three-wheeler">Three-Wheeler</option>
+                                <option value="four-wheeler">Four-Wheeler</option>
+                            </select>
+                        </div>
+                        <div class="input-field">
                             <i class="fas fa-cloud-sun"></i>
                             <select id="weather" name="weather">
-                                <option value="clear">Clear</option>
+                                <option value="">Select Weather</option>
+                                <option value="very-cold">Very Cold</option>
+                                <option value="very-sunny">Very Sunny</option>
                                 <option value="rain">Rain</option>
-                                <option value="cloudy">Cloudy</option>
+                                <option value="stormy">Stormy</option>
                             </select>
                         </div>
                     </div>

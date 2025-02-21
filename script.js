@@ -91,6 +91,12 @@ predictBtn.addEventListener('click', async function() {
     const selectedArea = areaSelect.value;
     if (!selectedArea) return;
 
+    // Animate input fields
+    document.querySelectorAll('.input-field').forEach(field => {
+        field.classList.add('animate');
+    });
+    predictBtn.classList.add('animate');
+
     // Remove current marker if exists
     if (currentMarker) {
         currentMarker.remove();
@@ -111,29 +117,19 @@ predictBtn.addEventListener('click', async function() {
         marker.openPopup();
         currentMarker = marker;
 
-        // Update prediction results
-        function updateResults(prediction) {
-            const densityMeter = document.querySelector('.meter-fill');
-            const densityValue = document.getElementById('predicted-density');
-            const maeValue = document.getElementById('mae-value');
-            const rmseValue = document.getElementById('rmse-value');
-        
-            // Update density meter
-            densityMeter.style.width = `${prediction.density * 100}%`;
-            
-            // Update values
-            densityValue.textContent = prediction.density.toFixed(2);
-            maeValue.textContent = prediction.mae.toFixed(4);
-            rmseValue.textContent = prediction.rmse.toFixed(4);
-        
-            // Show results panel
-            resultsPanel.classList.add('active');
-        }
+        updateResults(prediction);
         showToast('Prediction completed successfully!');
     } catch (error) {
         showToast('Failed to get prediction. Please try again.', 'error');
     } finally {
         loadingOverlay.classList.remove('active');
+        // Reset animations after delay
+        setTimeout(() => {
+            document.querySelectorAll('.input-field').forEach(field => {
+                field.classList.remove('animate');
+            });
+            predictBtn.classList.remove('animate');
+        }, 1000);
     }
 });
 
@@ -152,6 +148,54 @@ function validateInputs() {
 
 // Add validation listeners
 [timeInput, daySelect, weatherSelect].forEach(input => {
+    input.addEventListener('change', validateInputs);
+});
+
+// Add after your UI elements declarations
+const randomEventsSelect = document.getElementById('random-events');
+const peakHoursSelect = document.getElementById('peak-hours');
+
+// Add after your existing code
+// Populate hours dropdown
+function populateHours() {
+    const timeSelect = document.getElementById('time');
+    for (let i = 0; i < 24; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i.toString().padStart(2, '0') + ':00';
+        timeSelect.appendChild(option);
+    }
+}
+
+// Update form validation
+// Add to your UI elements declarations
+const vehicleTypeSelect = document.getElementById('vehicle-type');
+
+// Update validation function
+function validateInputs() {
+    const isTimeValid = timeInput.value !== '';
+    const isDayValid = daySelect.value !== '';
+    const isWeatherValid = weatherSelect.value !== '';
+    const isAreaValid = areaSelect.value !== '';
+    const isRandomEventsValid = randomEventsSelect.value !== '';
+    const isPeakHoursValid = peakHoursSelect.value !== '';
+    const isVehicleTypeValid = vehicleTypeSelect.value !== '';
+
+    predictBtn.disabled = !(isTimeValid && isDayValid && isWeatherValid && 
+                          isAreaValid && isRandomEventsValid && isPeakHoursValid &&
+                          isVehicleTypeValid);
+}
+
+// Add to validation listeners
+[timeInput, daySelect, weatherSelect, randomEventsSelect, peakHoursSelect, vehicleTypeSelect].forEach(input => {
+    input.addEventListener('change', validateInputs);
+});
+
+// Initialize hours dropdown
+populateHours();
+
+// Add validation listeners for new dropdowns
+[timeInput, daySelect, weatherSelect, randomEventsSelect, peakHoursSelect].forEach(input => {
     input.addEventListener('change', validateInputs);
 });
 
